@@ -2,6 +2,7 @@
 #define _ALLOCATOR_H_
 
 #include <new>
+#include<iostream>
 #pragma once
 namespace mySTL {
 	template<class T>
@@ -16,8 +17,12 @@ namespace mySTL {
 		public:
 			static T* allocate();
 			static T* allocate(size_type n);
+
 			static void deallocate(T* ptr);
 			static void deallocate(T* ptr, size_type n);
+
+			static void destroy(T* ptr);
+			static void destroy(T* ptr, size_type n);
 
 	};
 
@@ -41,9 +46,21 @@ namespace mySTL {
 	template<class T>
 	void Allocator<T>::deallocate(T* ptr, size_type n) {
 		if (ptr == nullptr) return;
+		::operator delete(ptr);
+	}
+
+	template<class T>
+	void Allocator<T>::destroy(T* ptr) {
+		if (ptr == nullptr) return;
+		ptr->~T();
+	}
+	
+	template<class T>
+	void Allocator<T>::destroy(T* ptr, size_type n) {
+		if (ptr == nullptr) return;
 		while (n > 0) {
 			n--;
-			::operator delete(ptr);
+			ptr->~T();
 			ptr++;
 		}
 	}
