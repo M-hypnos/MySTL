@@ -7,6 +7,14 @@
 
 namespace mySTL {
 	namespace testHelper {
+		template<class container>
+		void print(container& con) {
+			for (auto it : con) {
+				std::cout << it << " ";
+			}
+			std::cout << std::endl;
+		}
+
 		template<class container1, class container2>
 		bool equal(container1& con1, container2& con2) {
 			if (con1.size() != con2.size()) 
