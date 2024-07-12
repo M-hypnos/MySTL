@@ -5,6 +5,7 @@
 #include "../allocator/allocator.h"
 #include "../iterator/iterator.h"
 #include "../iterator/reverseIterator.h"
+#include "../allocator/uninitialized.h"
 #include "../allocator/construct.h"
 #include "../functors.h"
 
@@ -223,7 +224,7 @@ namespace mySTL {
 	template<class T, class Alloc>
 	typename list<T, Alloc>::nodePtr list<T, Alloc>::newNode(value_type value) {
 		nodePtr node = Alloc::allocate();
-		mySTL::construct(node, value);
+		mySTL::uninitialized_fill_n(node, 1, value);
 		return node;
 	}
 
@@ -373,11 +374,15 @@ namespace mySTL {
 
 	template<class T, class Alloc>
 	void list<T, Alloc>::push_back(const value_type& val) {
-		nodePtr node = newNode();
-		tail.node->data = val;
-		tail.node->next = node;
-		node->prev = tail.node;
-		tail.node = node;
+		if (empty()) {
+			push_front(val);
+			return;
+		}
+		nodePtr node = newNode(val);
+		tail.node->prev->next = node;
+		node->prev = tail.node->prev;
+		tail.node->prev = node;
+		node->next = tail.node;
 	}
 
 	template<class T, class Alloc>
