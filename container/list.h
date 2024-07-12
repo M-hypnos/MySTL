@@ -297,7 +297,10 @@ namespace mySTL {
 	template<class T, class Alloc>
 	typename list<T, Alloc>::iterator list<T, Alloc>::insert(iterator position, const value_type& value) {
 		if (position == begin()) {
-			push_front(value);
+			nodePtr node = newNode(value);
+			head.node->prev = node;
+			node->next = head.node;
+			head.node = node;
 			return begin();
 		}
 		nodePtr node = newNode(value);
@@ -366,23 +369,12 @@ namespace mySTL {
 
 	template<class T, class Alloc>
 	void list<T, Alloc>::push_front(const value_type& val) {
-		nodePtr node = newNode(val);
-		head.node->prev = node;
-		node->next = head.node;
-		head.node = node;
+		insert(begin(), val);
 	}
 
 	template<class T, class Alloc>
 	void list<T, Alloc>::push_back(const value_type& val) {
-		if (empty()) {
-			push_front(val);
-			return;
-		}
-		nodePtr node = newNode(val);
-		tail.node->prev->next = node;
-		node->prev = tail.node->prev;
-		tail.node->prev = node;
-		node->next = tail.node;
+		insert(end(), val);
 	}
 
 	template<class T, class Alloc>
