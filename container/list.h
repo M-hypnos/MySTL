@@ -196,10 +196,8 @@ namespace mySTL {
 			nodePtr newNode(value_type value = value_type());
 			void init();
 
-			template<class InputIterator>
-			void list_aux(InputIterator first, InputIterator last, std::false_type);
-			template<class Integer>
-			void list_aux(Integer n, const value_type& value, std::true_type);
+			void fill_init(size_type n, value_type value = value_type());
+
 			void deleteNode(nodePtr ptr);
 
 			template<class Interger>
@@ -229,6 +227,12 @@ namespace mySTL {
 	}
 
 	template<class T, class Alloc>
+	void list<T, Alloc>::fill_init(size_type n, value_type value) {
+		init();
+		insert(begin(), n, value);
+	}
+
+	template<class T, class Alloc>
 	list<T, Alloc>::~list() {
 		while (head != tail) {
 			auto tmp = head++;
@@ -244,55 +248,46 @@ namespace mySTL {
 
 	template<class T, class Alloc>
 	list<T, Alloc>::list(size_type n) {
-		std::true_type type;
-		list_aux(n, value_type(), type);
+		fill_init(n);
 	}
 
 	template<class T, class Alloc>
 	list<T, Alloc>::list(size_type n, const value_type& val) {
-		std::true_type type;
-		list_aux(n, val, type);
+		fill_init(n, val);
 	}
 
 	template<class T, class Alloc>
 	list<T, Alloc>::list(const list& other) {
-		std::false_type type;
-		list_aux(other.begin(), other.end(), type);
+		init();
+		insert(begin(), other.begin(), other.end());
 	}
 
 	template<class T, class Alloc>
 	list<T, Alloc>& list<T, Alloc>::operator=(const list& other) {
 		if (*this == other) return *this;
-		std::false_type type;
-		list_aux(other.begin(), other.end(), type);
+		auto it1 = head;
+		auto it2 = other.head;
+		while (it1 != end() && it2 != other.end()) {
+			*it1 = *it2;
+			it1++;
+			it2++;
+		}
+		if (it1 != end()) {
+			erase(it1, end());
+		}
+		else {
+			insert(it1, it2, other.end());
+		}
 		return *this;
 	}
 
 	template<class T, class Alloc>
 	template<class InputIterator>
 	list<T, Alloc>::list(InputIterator first, InputIterator last) {
-		list_aux(first, last, std::is_integral<InputIterator>::type());
+		init();
+		insert(begin(), first, last);
 	}
 
-	template<class T, class Alloc>
-	template<class InputIterator>
-	void list<T, Alloc>::list_aux(InputIterator first, InputIterator last, std::false_type) {
-		init();
-		while (first != last) {
-			push_back(*first);
-			first++;
-		}
-	}
-
-	template<class T, class Alloc>
-	template<class Integer>
-	void list<T, Alloc>::list_aux(Integer n, const value_type& value, std::true_type) {
-		init();
-		while (n > 0) {
-			n--;
-			push_back(value);
-		}
-	}
 
 	template<class T, class Alloc>
 	typename list<T, Alloc>::iterator list<T, Alloc>::insert(iterator position, const value_type& value) {

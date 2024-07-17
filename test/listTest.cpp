@@ -18,9 +18,16 @@ namespace mySTL {
 			auto l6(l2);
 			assert(mySTL::testHelper::equal(l5, l6));
 
-			auto l7 = l1;
-			auto l8 = l2;
+			stdList<int> l7(15, 10);
+			myList<int> l8(15, 10);
+			l7 = l1;
+			l8 = l2;
 			assert(mySTL::testHelper::equal(l7, l8));
+			stdList<int> l9(5, 10);
+			myList<int> l10(5, 10);
+			l9 = l1;
+			l10 = l2;
+			assert(mySTL::testHelper::equal(l9, l10));
 		}
 
 		void test2() {
@@ -235,6 +242,45 @@ namespace mySTL {
 			assert(l1 == l3);
 			assert(l1 != l2);
 		}
+		class TestItem
+		{
+		public:
+			TestItem()
+			{
+				++count;
+			}
+			TestItem(const TestItem& other)
+			{
+				++count;
+			}
+
+			virtual ~TestItem()
+			{
+				--count;
+			}
+
+			static int getCount()
+			{
+				return count;
+			}
+		private:
+			static int count;
+		};
+		int TestItem::count = 0;
+		void test16() {
+			assert(TestItem::getCount() == 0);
+			{
+				myList<TestItem> l1(10);
+				l1.push_back(TestItem());
+				l1.push_front(TestItem());
+
+				myList<TestItem> l2(10);
+				l2.push_back(TestItem());
+				l2.push_front(TestItem());
+
+			}
+			assert(TestItem::getCount() == 0);
+		}
 
 		void test() {
 			test1();
@@ -252,6 +298,7 @@ namespace mySTL {
 			test13();
 			test14();
 			test15();
+			test16();
 		}
 	}
 }
