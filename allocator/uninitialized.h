@@ -41,7 +41,7 @@ namespace mySTL {
 	template<class ForwardIterator, class InputIterator>
 	inline ForwardIterator uninitialized_copy_aux(ForwardIterator start, InputIterator first, InputIterator last, mySTL::_false_type) {
 		while (first != last) {
-			mySTL::construct(start, *first);
+			mySTL::construct(&(*start), *first);
 			first++;
 			start++;
 		}

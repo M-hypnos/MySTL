@@ -32,7 +32,7 @@ namespace mySTL {
 
 			constexpr static size_type buffer_size() {
 				size_type size = sizeof(T);
-				return size < 512 ? static_cast<size_type>(512 / size) : static_cast<size_type>(1);
+				return size < 512 ? size_type(512 / size) : size_type(1);
 			}
 
 			reference operator*() const { return *cur; }
@@ -67,7 +67,7 @@ namespace mySTL {
 			void setNode(mapPtr ptr) {
 				node = ptr;
 				first = *ptr;
-				last = *ptr + static_cast<difference_type>(buffer_size());
+				last = *ptr + difference_type(buffer_size());
 			}
 			bool operator== (const deque_iterator& rhs) const {
 				return cur == rhs.cur;
@@ -82,20 +82,19 @@ namespace mySTL {
 				}
 				else {
 					difference_type node_offset = 0;
-					if (cur + n < first) {
-						node_offset = -((first - cur - n) / static_cast<difference_type>(buffer_size()) + 1);
+					if (n < 0) {
+						node_offset = -((-n - (cur - first) - 1) / difference_type(buffer_size()) + 1);
 					}
 					else {
-						node_offset = (cur + n - last + 1) / static_cast<difference_type>(buffer_size()) + 1;
+						node_offset = (cur - first + n) / difference_type(buffer_size());
 					}
 					difference_type offset = cur - first;
 					setNode(node + node_offset);
-
-					if (node_offset > 0) {
-						cur = first + (n + offset) % static_cast<difference_type>(buffer_size());
+					if (node_offset < 0) {
+						cur = first + (-node_offset) * difference_type(buffer_size()) + offset - (-n);
 					}
 					else {
-						cur = last + (n + offset) % static_cast<difference_type>(buffer_size());
+						cur = first + (offset + n) % difference_type(buffer_size());
 					}
 				}
 				return *this;
@@ -114,6 +113,10 @@ namespace mySTL {
 				auto tmp = *this;
 				return tmp -= n;
 			}
+
+			difference_type operator-(const deque_iterator& other) const {
+				return (node - other.node) * buffer_size() + (cur - first) - (other.cur - other.first);
+			}
 		};
 	}
 
@@ -128,6 +131,9 @@ namespace mySTL {
 			typedef T* pointer;
 			typedef T** mapPtr;
 			typedef deque_detial::deque_iterator<T> iterator;
+			typedef const deque_detial::deque_iterator<T> const_iterator;
+			typedef mySTL::reverse_iterator<iterator> reverse_iterator;
+			typedef mySTL::reverse_iterator<const_iterator> const_reverse_iterator;
 			constexpr static size_type buffer_size = iterator::buffer_size();
 		protected:
 			typedef Allocator<pointer> mapAlloc;
@@ -151,9 +157,14 @@ namespace mySTL {
 			reference operator[] (const difference_type& n) { return *(start + n); }
 
 			iterator begin() { return start; }
-			iterator begin() const { return start; }
 			iterator end() { return finish; }
+			iterator begin() const { return start; }
 			iterator end() const { return finish; }
+			reverse_iterator rbegin() { return reverse_iterator(end()); }
+			const_reverse_iterator crbegin() const { return const_reverse_iterator(end()); }
+			reverse_iterator rend() { return reverse_iterator(begin()); }
+			const_reverse_iterator crend() const { return const_reverse_iterator(begin()); }
+
 
 			reference front() { return *start; }
 			reference back() { return *(finish-1); }
@@ -166,13 +177,30 @@ namespace mySTL {
 			void pop_front();
 			void pop_back();
 
+			void clear();
+
+			iterator erase(iterator position);
+			iterator erase(iterator first, iterator last);
 
 			iterator insert(iterator position, const value_type& val);
+			iterator insert(iterator position, size_type n, const value_type& val);
+			template<class InputIterator>
+			iterator insert(iterator position, InputIterator first, InputIterator last);
 
 			void swap(deque& x);
+			void resize(size_type n, const value_type value = value_type());
+
+			reference at(size_type pos);
+			reference operator[](size_type pos) { return at(pos); }
 
 			template<class T, class Alloc>
 			friend void swap(deque<T, Alloc>& lhs, deque<T, Alloc>& rhs);
+
+			template<class T, class Alloc>
+			friend bool operator==(const deque<T, Alloc>& lhs, const deque<T, Alloc>& rhs);
+
+			template<class T, class Alloc>
+			friend bool operator!=(const deque<T, Alloc>& lhs, const deque<T, Alloc>& rhs);
 
 		protected:
 			void create_map_nodes(size_type n);
@@ -182,13 +210,17 @@ namespace mySTL {
 			template<class Interger>
 			void deque_aux(size_type n, Interger val, std::true_type);
 
+			template<class InputIterator>
+			iterator insert_aux(iterator position, InputIterator first, InputIterator last, std::false_type);
+			template<class Interger>
+			iterator insert_aux(iterator position, size_type n, Interger val, std::true_type);
+
 			iterator reserve_elements_at_front(size_type n);
 			void reserve_map_at_front(size_type add_nodes_num);
 			iterator reserve_elements_at_back(size_type n);
 			void reserve_map_at_back(size_type add_nodes_num);
 			void reallocate_map(size_type add_nodes_num, bool is_front);
 			
-			void destroy_element(pointer ptr);
 	};
 
 	template<class T, class Alloc>
@@ -258,8 +290,14 @@ namespace mySTL {
 	template<class T, class Alloc>
 	deque<T, Alloc>&  deque<T, Alloc>::operator=(const deque& other) {
 		if (*this == other) return *this;
-		std::false_type type;
-		deque_aux(other.begin(), other.end(), type);
+		if (size() > other.size()) {
+			std::copy(other.start, other.finish, start);
+			erase(start + other.size(), finish);
+		}
+		else {
+			std::copy(other.start, other.start + size(), start);
+			insert(finish, other.start + size(), other.finish);
+		}
 		return *this;
 	}
 	
@@ -268,6 +306,7 @@ namespace mySTL {
 		if (*this == other) return *this;
 
 		create_map_nodes(0);
+
 		swap(other);
 
 		return *this;
@@ -288,19 +327,20 @@ namespace mySTL {
 
 	template<class T, class Alloc>
 	typename deque<T, Alloc>::size_type deque<T, Alloc>::size() const {
-		difference_type node_diff = finish.node - start.node;
-		return (node_diff + 1) * buffer_size - (start.cur - start.first) - (finish.last - finish.cur);
+		return finish - start;
 	}
 
 	template<class T, class Alloc>
 	typename deque<T, Alloc>::iterator deque<T, Alloc>::reserve_elements_at_front(size_type n) {
 		size_type surplus_n = start.cur - start.first;
-		if (surplus_n <= n) {
-			return start - difference_type(n);
+		if (surplus_n < n) {
+			size_type add_nodes_num = (n - 1 - surplus_n) / buffer_size + 1;
+			reserve_map_at_front(add_nodes_num);
+			for (auto i = 1; i <= add_nodes_num; i++) {
+				*(start.node - i) = Alloc::allocate(buffer_size);
+			}
 		}
-		else {
-			reserve_map_at_front(size_type((n - surplus_n) / buffer_size + 1));
-		}
+		return start - difference_type(n);
 	}
 
 	template<class T, class Alloc>
@@ -313,12 +353,15 @@ namespace mySTL {
 	template<class T, class Alloc>
 	typename deque<T, Alloc>::iterator deque<T, Alloc>::reserve_elements_at_back(size_type n) {
 		size_type surplus_n = finish.last - finish.cur;
-		if (surplus_n <= n) {
-			return finish + difference_type(n);
+		if (surplus_n < n) {
+			size_type add_nodes_num = (n - surplus_n) / buffer_size + 1;
+			reserve_map_at_back(add_nodes_num);
+			for (auto i = 1; i <= add_nodes_num; i++) {
+				*(finish.node + i) = Alloc::allocate(buffer_size);
+			}
+
 		}
-		else {
-			reserve_map_at_back(size_type((n - surplus_n) / buffer_size + 1));
-		}
+		return finish + difference_type(n);
 	}
 
 	template<class T, class Alloc>
@@ -346,7 +389,7 @@ namespace mySTL {
 		else {
 			size_type new_map_size = std::max(2 * map_size, map_size + add_nodes_num) + 2;
 			mapPtr newMap = mapAlloc::allocate(new_map_size);
-			startMapPtr = newMap + (map_size - new_nodes_num) / 2;
+			startMapPtr = newMap + (new_map_size - new_nodes_num) / 2;
 			if (is_front) startMapPtr += add_nodes_num;
 			std::copy(start.node, finish.node + 1, startMapPtr);
 			mapAlloc::deallocate(map, map_size);
@@ -360,48 +403,228 @@ namespace mySTL {
 	template<class T, class Alloc>
 	void deque<T, Alloc>::push_front(const value_type& val) {
 		if (start.cur != start.first) {
-			mySTL::uninitialized_fill_n(start.cur-1, 1, val);
-			start--;
+			start.cur--;
 		}
 		else {
 			reserve_map_at_front(1);
 			*(start.node-1) = Alloc::allocate(buffer_size);
 			start--;
-			start.cur = start.last - 1;
-			mySTL::uninitialized_fill_n(start.cur, 1, val);
 		}
+		mySTL::uninitialized_fill_n(start.cur, 1, val);
 	}
 
 	template<class T, class Alloc>
 	void deque<T, Alloc>::pop_front() {
 		Alloc::destroy(start.cur);
 		start++;
+		if (start.cur == start.first) {
+			Alloc::deallocate(*(start.node-1), buffer_size);
+		}
 	}
 	
 	template<class T, class Alloc>
 	void deque<T, Alloc>::push_back(const value_type& val) {
-		if (finish.cur != finish.last) {
-			mySTL::uninitialized_fill_n(finish.cur, 1, val);
-			finish++;
-		}
-		else {
+		mySTL::uninitialized_fill_n(finish.cur, 1, val);
+		finish.cur++;
+		if (finish.cur == finish.last) {
 			reserve_map_at_back(1);
 			*(finish.node + 1) = Alloc::allocate(buffer_size);
-			finish++;
+			finish.setNode(finish.node + 1);
 			finish.cur = finish.first;
-			mySTL::uninitialized_fill_n(finish.cur, 1, val);
 		}
 	}
 
 	template<class T, class Alloc>
 	void deque<T, Alloc>::pop_back() {
+		if (finish.cur == finish.first) {
+			Alloc::deallocate(finish.cur, buffer_size);
+		}
 		finish--;
 		Alloc::destroy(finish.cur);
 	}
 
 	template<class T, class Alloc>
+	typename deque<T, Alloc>::iterator deque<T, Alloc>::erase(iterator position) {
+		if (position == end()) return end();
+		return erase(position, position + 1);
+	}
+	
+	template<class T, class Alloc>
+	typename deque<T, Alloc>::iterator deque<T, Alloc>::erase(iterator first, iterator last) {
+		if (last - first == 0) return last;
+		difference_type diff = finish - last;
+		mySTL::uninitialized_copy(first, last, finish);
+		auto new_finish = first + diff;
+		for (auto node = new_finish.node + 1; node < finish.node; node++) {
+			Alloc::destroy(*node, buffer_size);
+			Alloc::deallocate(*node, buffer_size);
+		}
+		if (new_finish.node == finish.node) {
+			Alloc::destroy(new_finish.cur, finish.cur - new_finish.cur);
+		}
+		else {
+			Alloc::destroy(new_finish.cur, new_finish.last - new_finish.cur);
+			Alloc::destroy(finish.first, finish.cur - finish.first);
+			Alloc::deallocate(*finish.node, buffer_size);
+		}
+		finish = new_finish;
+		return first;
+	}
+
+	template<class T, class Alloc>
 	typename deque<T, Alloc>::iterator deque<T, Alloc>::insert(iterator position, const value_type& val) {
-		
+		if (position == start) {
+			push_front(val);
+			return start;
+		}
+		else if (position == finish) {
+			push_back(val);
+			return finish - 1;
+		}
+		else {
+			difference_type len = position - start;
+			if (len < size() / 2) {
+				push_front(front());
+				difference_type front_offset = 1;
+				iterator pos = start + len;
+				std::copy(start + 1 + front_offset, pos + front_offset, start+ front_offset);
+				*pos = val;
+				return pos;
+			}
+			else {
+				push_back(back());
+				difference_type back_offset = 1;
+				iterator pos = start + len;
+				std::copy_backward(pos, finish - 1 - back_offset, finish - back_offset);
+				*pos = val;
+				return position;
+			}
+		}
+	}
+	
+	template<class T, class Alloc>
+	typename deque<T, Alloc>::iterator deque<T, Alloc>::insert(iterator position, size_type n, const value_type& val) {
+		std::true_type type;
+		return insert_aux(position, n, val, type);
+	}
+
+	template<class T, class Alloc>
+	template<class InputIterator>
+	typename deque<T, Alloc>::iterator deque<T, Alloc>::insert(iterator position, InputIterator first, InputIterator last) {
+		return insert_aux(position, first, last, std::is_integral<InputIterator>::type());
+	}
+
+	template<class T, class Alloc>
+	template<class Interger>
+	typename deque<T, Alloc>::iterator deque<T, Alloc>::insert_aux(iterator position, size_type n, Interger val, std::true_type) {
+		if (n == 0) return position;
+		if (position == start) {
+			start = reserve_elements_at_front(n);
+			mySTL::uninitialized_fill_n(start, n, val);
+			return start;
+		}
+		else if (position == finish) {
+			finish = reserve_elements_at_back(n);
+			mySTL::uninitialized_fill_n(finish - n, n, val);
+			return finish - n;
+		}
+		else {
+			difference_type len = position - start;
+			if (len < size() / 2) {
+				auto new_start = reserve_elements_at_front(n);
+				auto pos = start + len;
+				if (n >= len) {
+					mySTL::uninitialized_copy(new_start, start, pos);
+					mySTL::uninitialized_fill_n(new_start + len, n - len, val);
+					std::fill_n(start, len, val);
+				}
+				else {
+					mySTL::uninitialized_copy(new_start, start, start + n);
+					std::copy(start + n, pos, start);
+					std::fill_n(pos - n, n, val);
+				}
+				start = new_start;
+			}
+			else {
+				auto after_len = finish - position;
+				auto new_finish = reserve_elements_at_back(n);
+				auto pos = finish - after_len;
+				if (n >= after_len) {
+					mySTL::uninitialized_copy(new_finish - after_len, pos, finish);
+					mySTL::uninitialized_fill_n(finish, n - after_len, val);
+					std::fill_n(pos, after_len, val);
+				}
+				else {
+					mySTL::uninitialized_copy(finish, finish - n, finish);
+					std::copy_backward(pos, finish - n, finish);
+					std::fill_n(pos, n, val);
+				}
+				finish = new_finish;
+			}
+			return start + len;
+		}
+	}
+
+	template<class T, class Alloc>
+	template<class InputIterator>
+	typename deque<T, Alloc>::iterator deque<T, Alloc>::insert_aux(iterator position, InputIterator first, InputIterator last, std::false_type) {
+		difference_type n = last - first;
+		if (position == start) {
+			start = reserve_elements_at_front(n);
+			mySTL::uninitialized_copy(start, first, last);
+			return start;
+		}
+		else if (position == finish) {
+			finish = reserve_elements_at_back(n);
+			mySTL::uninitialized_copy(finish - n, first, last);
+			return finish - n;
+		}
+		else {
+			difference_type len = position - start;
+			if (len < size() / 2) {
+				auto new_start = reserve_elements_at_front(n);
+				auto pos = start + len;
+				if (n >= len) {
+					mySTL::uninitialized_copy(new_start, start, pos);
+					mySTL::uninitialized_copy(new_start + len, first, last - len);
+					std::copy(last - len, last, start);
+				}
+				else {
+					mySTL::uninitialized_copy(new_start, start, start + n);
+					std::copy(start + n, pos, start);
+					std::copy(first, last, pos - n);
+				}
+				start = new_start;
+			}
+			else {
+				auto after_len = finish - position;
+				auto new_finish = reserve_elements_at_back(n);
+				auto pos = finish - after_len;
+				if (n >= after_len) {
+					mySTL::uninitialized_copy(new_finish - after_len, pos, finish);
+					mySTL::uninitialized_copy(finish, first + after_len, last);
+					std::copy(first, first + after_len, pos);
+				}
+				else {
+					mySTL::uninitialized_copy(finish, finish - n, finish);
+					std::copy_backward(pos, finish - n, finish);
+					std::copy(first, last, pos);
+				}
+				finish = new_finish;
+			}
+			return start + len;
+		}
+	}
+
+	template<class T, class Alloc>
+	typename deque<T, Alloc>::reference deque<T, Alloc>::at(size_type pos) {
+		auto tmp = begin();
+		return *(tmp + pos);
+	}
+
+	template<class T, class Alloc>
+	void deque<T, Alloc>::clear() {
+		erase(start, finish);
 	}
 
 	template<class T, class Alloc>
@@ -415,6 +638,35 @@ namespace mySTL {
 	template<class T, class Alloc>
 	void swap(deque<T, Alloc>& lhs, deque<T, Alloc>& rhs) {
 		lhs.swap(rhs);
+	}
+
+	template<class T, class Alloc>
+	void deque<T, Alloc>::resize(size_type n, value_type value) {
+		if (n == size()) return;
+		if (n < size()) {
+			erase(start + n, finish);
+		}
+		else {
+			insert(finish, n - size(), value);
+		}
+	}
+
+	template<class T, class Alloc>
+	bool operator==(const deque<T, Alloc>& lhs, const deque<T, Alloc>& rhs) {
+		auto it1 = lhs.begin();
+		auto it2 = rhs.begin();
+		while (it1 != lhs.end() && it2 != rhs.end()) {
+			if (*it1 != *it2)
+				return false;
+			it1++;
+			it2++;
+		}
+		return it1 == lhs.end() && it2 == rhs.end();
+	}
+
+	template<class T, class Alloc>
+	bool operator!=(const deque<T, Alloc>& lhs, const deque<T, Alloc>& rhs) {
+		return !(lhs == rhs);
 	}
 }
 
