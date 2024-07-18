@@ -17,7 +17,7 @@ namespace mySTL {
 			list_node* prev;
 			list_node* next;
 			T data;
-			list_node(const T& val):data(val){}
+			list_node(const T& val):data(val),prev(nullptr),next(nullptr){}
 
 			/*bool operator==(const list_node& rhs) {
 				return data == rhs.data && prev == rhs.prev && next == rhs.next;
@@ -58,7 +58,7 @@ namespace mySTL {
 			typedef list_node<T>* nodePtr;
 
 			nodePtr node;
-			list_iterator() = default;
+			list_iterator():node(nullptr) {}
 			explicit list_iterator(nodePtr x):node(x){}
 			list_iterator(const list_iterator& x):node(x.node){}
 
