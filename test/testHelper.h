@@ -31,6 +31,20 @@ namespace mySTL {
 			return true;
 		}
 
+		template<class container1, class container2>
+		bool equal_ex(container1& con1, container2& con2) {
+			auto first1 = std::begin(con1);
+			auto first2 = std::begin(con2);
+			while (first1 != std::end(con1) && first2 != std::end(con2)) {
+				if (*first1 != *first2) {
+					return false;
+				}
+				first1++;
+				first2++;
+			}
+			return first1 == std::end(con1) && first2 == std::end(con2);
+		}
+
 	}
 }
 

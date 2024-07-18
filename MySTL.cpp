@@ -4,6 +4,7 @@
 #include "test/vectorTest.h"
 #include "test/listTest.h"
 #include "test/dequeTest.h"
+#include "test/slistTest.h"
 
 int main()
 {
@@ -11,4 +12,5 @@ int main()
     mySTL::vectorTest::test();
     mySTL::listTest::test();
     mySTL::dequeTest::test();
+    mySTL::slistTest::test();
 }
