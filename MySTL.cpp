@@ -5,6 +5,7 @@
 #include "test/listTest.h"
 #include "test/dequeTest.h"
 #include "test/slistTest.h"
+#include "test/queueTest.h"
 
 int main()
 {
@@ -13,4 +14,5 @@ int main()
     mySTL::listTest::test();
     mySTL::dequeTest::test();
     mySTL::slistTest::test();
+    mySTL::queueTest::test();
 }
