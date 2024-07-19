@@ -3,6 +3,7 @@
 #pragma once
 #include <queue>
 #include "../container/queue.h"
+#include "../container/priority_queue.h"
 
 namespace mySTL {
 	namespace queueTest {
@@ -16,6 +17,7 @@ namespace mySTL {
 		void test3();
 		void test4();
 		void test5();
+		void test6();
 		void test();
 	}
 }
