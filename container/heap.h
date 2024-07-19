@@ -14,10 +14,10 @@ namespace mySTL {
 		auto leftChildIdx = 2 * topIdx + 1;
 		while (leftChildIdx < len) {
 			auto changeIdx = topIdx;
-			if (comp(*(head + leftChildIdx), *(head + topIdx))) {
+			if (comp(*(head + topIdx), *(head + leftChildIdx))) {
 				changeIdx = leftChildIdx;
 			}
-			if (leftChildIdx + 1 < len && comp(*(head + leftChildIdx + 1), *(head + changeIdx))) {
+			if (leftChildIdx + 1 < len && comp(*(head + changeIdx), *(head + leftChildIdx + 1))) {
 				changeIdx = leftChildIdx + 1;
 			}
 			if (changeIdx == topIdx) break;
@@ -37,7 +37,7 @@ namespace mySTL {
 		auto parentIdx = (bottomIdx - 1) / 2;
 		auto initIdx = first - head;
 		while (parentIdx >= initIdx) {
-			if (comp(*(head + bottomIdx), *(head + parentIdx))) {
+			if (comp(*(head + parentIdx), *(head + bottomIdx))) {
 				auto tmp = *(head + parentIdx);
 				*(head + parentIdx) = *(head + bottomIdx);
 				*(head + bottomIdx) = tmp;
@@ -53,7 +53,7 @@ namespace mySTL {
 	template<class RandomAccessIterator>
 	void pop_heap(RandomAccessIterator first, RandomAccessIterator last) {
 		typedef typename mySTL::iterator_traits<RandomAccessIterator>::value_type value_type;
-		pop_heap(first, last, mySTL::greater<value_type>());
+		pop_heap(first, last, mySTL::less<value_type>());
 	}
 
 	template<class RandomAccessIterator, class Compare>
@@ -67,7 +67,7 @@ namespace mySTL {
 	template<class RandomAccessIterator>
 	void push_heap(RandomAccessIterator first, RandomAccessIterator last) {
 		typedef typename mySTL::iterator_traits<RandomAccessIterator>::value_type value_type;
-		push_heap(first, last, mySTL::greater<value_type>());
+		push_heap(first, last, mySTL::less<value_type>());
 	}
 
 	template<class RandomAccessIterator, class Compare>
@@ -78,7 +78,7 @@ namespace mySTL {
 	template<class RandomAccessIterator>
 	void sort_heap(RandomAccessIterator first, RandomAccessIterator last) {
 		typedef typename mySTL::iterator_traits<RandomAccessIterator>::value_type value_type;
-		sort_heap(first, last, mySTL::greater<value_type>());
+		sort_heap(first, last, mySTL::less<value_type>());
 	}
 
 	template<class RandomAccessIterator, class Compare>
@@ -91,7 +91,8 @@ namespace mySTL {
 	template<class RandomAccessIterator>
 	void make_heap(RandomAccessIterator first, RandomAccessIterator last) {
 		typedef typename mySTL::iterator_traits<RandomAccessIterator>::value_type value_type;
-		make_heap(first, last, mySTL::greater<value_type>());
+		make_heap(first, last, mySTL::less
+			<value_type>());
 	}
 
 	template<class RandomAccessIterator, class Compare>
