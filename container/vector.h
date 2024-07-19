@@ -55,7 +55,7 @@ namespace mySTL {
 			difference_type size() const { return finish - start; }
 			difference_type capacity() const { return end_of_storage - start; }
 
-			bool empty() { return start == finish; }
+			bool empty() const { return start == finish; }
 
 			void resize(size_type n, value_type value = value_type());
 			void reserve(size_type n);
