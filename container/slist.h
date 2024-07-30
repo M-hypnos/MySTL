@@ -157,7 +157,7 @@ namespace mySTL {
 	template<class T, class Alloc>
 	typename slist<T, Alloc>::nodePtr slist<T, Alloc>::newNode(value_type value) {
 		nodePtr node = Alloc::allocate();
-		mySTL::uninitialized_fill_n(node, 1, value);
+		mySTL::construct(node, value);
 		return node;
 	}
 
