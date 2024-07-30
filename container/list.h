@@ -222,7 +222,7 @@ namespace mySTL {
 	template<class T, class Alloc>
 	typename list<T, Alloc>::nodePtr list<T, Alloc>::newNode(value_type value) {
 		nodePtr node = Alloc::allocate();
-		mySTL::uninitialized_fill_n(node, 1, value);
+		mySTL::construct(&node->data, value);
 		return node;
 	}
 
