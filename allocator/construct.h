@@ -7,6 +7,11 @@ namespace mySTL {
 	inline void construct(T1* ptr, T2& value) {
 		new (ptr) T1(value);
 	}
+
+	template<class T>
+	inline void destroy(T* ptr) {
+		ptr->~T();
+	}
 }
 
 #endif // !_CONSTRUCT_H_
