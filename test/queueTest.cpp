@@ -70,7 +70,8 @@ namespace mySTL {
 			mySTL::priority_queue<int> pq22;
 			pq11.swap(pq1);
 			pq22.swap(pq2);
-			assert(pq1.top() == pq2.top());
+			assert(pq1.empty());
+			assert(pq2.empty());
 			assert(pq11.top() == pq22.top());
 
 			std::priority_queue<int, std::vector<int>, std::greater<int>> pq3(std::greater<int>(), vec1);
