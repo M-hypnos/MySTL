@@ -1,7 +1,6 @@
 #ifndef _ITERATOR_H_
 #define _ITERATOR_H_
-
-#pragma once
+#include <cstddef>
 namespace mySTL {
 	struct input_iterator_tag {};
 	struct output_iterator_tag {};
