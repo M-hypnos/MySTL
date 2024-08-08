@@ -246,6 +246,13 @@ namespace mySTL {
 
 			}
 			assert(TestItem::getCount() == 0);
+
+
+			const myVec<int> v(10, 9);
+			//const myVec<int>::iterator cit2 = v.begin(); 只能用于非const容器
+			myVec<int>::const_iterator it = v.begin();
+			//*it = 10; *it是const
+			++it;
 		}
 
 		void test() {

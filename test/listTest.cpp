@@ -83,6 +83,12 @@ namespace mySTL {
 				l1.push_back(i);
 				l2.push_back(i);
 			}
+
+			int i = 0;
+			for (myList<int>::const_iterator it = l2.cbegin(); it != l2.cend(); ++it, ++i) {
+				assert(*it == i);
+			}
+
 			auto rit1 = l1.rbegin();
 			auto rit2 = l2.rbegin();
 			for (; rit1 != l1.rend() && rit2 != l2.rend(); ++rit1, ++rit2) {
@@ -280,6 +286,12 @@ namespace mySTL {
 
 			}
 			assert(TestItem::getCount() == 0);
+
+			const myList<int> v(10, 9);
+			//const myList<int>::iterator cit2 = v.begin(); 只能用于非const容器
+			myList<int>::const_iterator it = v.begin();
+			//*it = 10; *it是const
+			++it;
 		}
 
 		void test() {

@@ -269,6 +269,12 @@ namespace mySTL {
 			l1.resize(8, 7);
 			l2.resize(8, 7);
 			assert(mySTL::testHelper::equal_ex(l1, l2));
+
+			const mySlist<int> v(10, 9);
+			//const mySlist<int>::iterator cit2 = v.begin(); 只能用于非const容器
+			mySlist<int>::const_iterator it = v.begin();
+			//*it = 10; *it是const
+			++it;
 		}
 
 		void test() {
