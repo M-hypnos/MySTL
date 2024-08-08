@@ -16,13 +16,13 @@ namespace mySTL {
 			slist_node(const T& val) :data(val), next(nullptr){}
 		};
 
-		template<class T>
+		template<class T, class Ptr, class Ref>
 		struct slist_iterator {
 			typedef forward_iterator_tag iterator_category;
 			typedef T value_type;
 			typedef ptrdiff_t difference_type;
-			typedef T* pointer;
-			typedef T& reference;
+			typedef Ptr pointer;
+			typedef Ref reference;
 			typedef slist_node<T>* nodePtr;
 
 			nodePtr node;
@@ -43,20 +43,25 @@ namespace mySTL {
 				return *this;
 			}
 
-			template<class T>
+			/*template<class T>
 			friend bool operator== (const slist_iterator<T>& lhs, const slist_iterator<T>& rhs);
 			template<class T>
-			friend bool operator!= (const slist_iterator<T>& lhs, const slist_iterator<T>& rhs);
+			friend bool operator!= (const slist_iterator<T>& lhs, const slist_iterator<T>& rhs);*/
+
+			bool operator==(const slist_iterator<T, T*, T&>& rhs) const { return node == rhs.node; }
+			bool operator!=(const slist_iterator<T, T*, T&>& rhs) const { return !(node == rhs.node); }
+			bool operator==(const slist_iterator<T, const T*, const T&>& rhs) const { return node == rhs.node; }
+			bool operator!=(const slist_iterator<T, const T*, const T&>& rhs) const { return !(node == rhs.node); }
 		};
 
-		template<class T>
+		/*template<class T>
 		bool operator==(const slist_iterator<T>& lhs, const slist_iterator<T>& rhs) {
 			return lhs.node == rhs.node;
 		}
 		template<class T>
 		bool operator!=(const slist_iterator<T>& lhs, const slist_iterator<T>& rhs) {
 			return !(lhs.node == rhs.node);
-		}
+		}*/
 	}
 
 	template<class T, class Alloc = Allocator<slist_detail::slist_node<T>>>
@@ -64,16 +69,15 @@ namespace mySTL {
 	public:
 		typedef size_t size_type;
 		typedef T value_type;
-		typedef slist_detail::slist_iterator<T> iterator;
 		typedef ptrdiff_t difference_type;
 		typedef T& reference;
 		typedef const T& const_reference;
 		typedef T* pointer;
-
-		typedef const iterator const_iterator;
+		typedef slist_detail::slist_iterator<T, T*, T&> iterator;
+		typedef slist_detail::slist_iterator<T, const T*, const T&> const_iterator;
 		typedef slist_detail::slist_node<T>* nodePtr;
 	private:
-		iterator head;
+		nodePtr head;
 	public:
 		slist();
 		explicit slist(size_type n);
@@ -85,18 +89,18 @@ namespace mySTL {
 
 		~slist();
 
-		iterator before_begin() { return head; }
-		const_iterator before_begin() const { return head; }
-		const_iterator cbefore_begin() const { return head; }
-		iterator begin() { return iterator(head.node->next); }
-		const_iterator begin() const { return const_iterator(head.node->next); }
-		const_iterator cbegin() const { return const_iterator(head.node->next); }
+		iterator before_begin() { return iterator(head); }
+		const_iterator before_begin() const { return const_iterator(head); }
+		const_iterator cbefore_begin() const { return const_iterator(head); }
+		iterator begin() { return iterator(head->next); }
+		const_iterator begin() const { return const_iterator(head->next); }
+		const_iterator cbegin() const { return const_iterator(head->next); }
 		iterator end() { return iterator(); }
 		const_iterator end() const { return const_iterator(); }
 		const_iterator cend() const { return const_iterator(); }
 
-		reference front() { return head.node->next->data; }
-		const_reference front() const { return head.node->next->data; }
+		reference front() { return head->next->data; }
+		const_reference front() const { return head->next->data; }
 
 		iterator insert_after(iterator position, const value_type& value);
 		iterator insert_after(iterator position, size_type count, const value_type& value);
@@ -109,7 +113,7 @@ namespace mySTL {
 		void push_front(const value_type& val);
 		void pop_front();
 
-		bool empty() const { return head.node->next == nullptr; }
+		bool empty() const { return head->next == nullptr; }
 
 		void swap(slist& other);
 		void clear();
@@ -170,14 +174,14 @@ namespace mySTL {
 	template<class T, class Alloc>
 	void slist<T, Alloc>::init() {
 		nodePtr node = newNode();
-		head.node = node;
+		head = node;
 	}
 
 
 	template<class T, class Alloc>
 	slist<T, Alloc>::~slist() {
 		erase_after(before_begin(), end());
-		deleteNode(head.node);
+		deleteNode(head);
 	}
 
 	template<class T, class Alloc>
@@ -304,9 +308,9 @@ namespace mySTL {
 
 	template<class T, class Alloc>
 	void slist<T, Alloc>::swap(slist& other) {
-		auto tmp = head.node;
-		head.node = other.head.node;
-		other.head.node = tmp;
+		auto tmp = head;
+		head = other.head;
+		other.head = tmp;
 	}
 
 	template<class T, class Alloc>
@@ -391,7 +395,7 @@ namespace mySTL {
 	template<class T, class Alloc>
 	template<class Compare>
 	void slist<T, Alloc>::sort(Compare comp) {
-		if (empty() || head.node->next->next == nullptr) return;
+		if (empty() || head->next->next == nullptr) return;
 		slist<T, Alloc> carry;
 		slist<T, Alloc> count[64];
 		int lastIdx = 0;
@@ -413,7 +417,7 @@ namespace mySTL {
 
 	template<class T, class Alloc>
 	void slist<T, Alloc>::reverse() {
-		auto headNode = head.node;
+		auto headNode = head;
 		nodePtr leftNode = nullptr;
 		auto rightNode = headNode->next;
 		if (rightNode == nullptr) return;
@@ -428,9 +432,9 @@ namespace mySTL {
 
 	template<class T, class Alloc>
 	void slist<T, Alloc>::unique() {
-		if (empty() || head.node->next->next == nullptr) return;
+		if (empty() || head->next->next == nullptr) return;
 		auto it1 = begin();
-		auto it2 = iterator(head.node->next->next);
+		auto it2 = iterator(head->next->next);
 		while (it2 != end()) {
 			if (*it1 == *it2) {
 				it1.node->next = it2.node->next;
@@ -448,9 +452,9 @@ namespace mySTL {
 	template<class T, class Alloc>
 	template <class BinaryPredicate>
 	void slist<T, Alloc>::unique(BinaryPredicate binary_pred) {
-		if (empty() || head.node->next->next == nullptr) return;
+		if (empty() || head->next->next == nullptr) return;
 		auto it1 = begin();
-		auto it2 = iterator(head.node->next->next);
+		auto it2 = iterator(head->next->next);
 		while (it2 != end()) {
 			if (binary_pred(*it1, *it2)) {
 				it1.node->next = it2.node->next;

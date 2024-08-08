@@ -48,13 +48,13 @@ namespace mySTL {
 
 		};*/
 
-		template<class T>
+		template<class T, class Ptr, class Ref>
 		struct list_iterator {
 			typedef bidrectional_iterator_tag iterator_category;
 			typedef T value_type;
 			typedef ptrdiff_t difference_type;
-			typedef T* pointer;
-			typedef T& reference;
+			typedef Ptr pointer;
+			typedef Ref reference;
 			typedef list_node<T>* nodePtr;
 
 			nodePtr node;
@@ -84,20 +84,24 @@ namespace mySTL {
 				return *this;
 			}
 
-			template<class T>
+			/*template<class T>
 			friend bool operator== (const list_iterator<T>& lhs, const list_iterator<T>& rhs);
 			template<class T>
-			friend bool operator!= (const list_iterator<T>& lhs, const list_iterator<T>& rhs);
+			friend bool operator!= (const list_iterator<T>& lhs, const list_iterator<T>& rhs);*/
+			bool operator==(const list_iterator<T, T*, T&>& rhs) const { return node == rhs.node; }
+			bool operator!=(const list_iterator<T, T*, T&>& rhs) const { return !(node == rhs.node); }
+			bool operator==(const list_iterator<T, const T*, const T&>& rhs) const { return node == rhs.node; }
+			bool operator!=(const list_iterator<T, const T*, const T&>& rhs) const { return !(node == rhs.node); }
 		};
 
-		template<class T>
+		/*template<class T>
 		bool operator==(const list_iterator<T>& lhs, const list_iterator<T>& rhs) {
 			return lhs.node == rhs.node;
 		}
 		template<class T>
 		bool operator!=(const list_iterator<T>& lhs, const list_iterator<T>& rhs) {
 			return !(lhs.node == rhs.node);
-		}
+		}*/
 	}
 
 	template<class T, class Alloc = Allocator<list_detail::list_node<T>>>
@@ -105,20 +109,20 @@ namespace mySTL {
 		public:
 			typedef size_t size_type;
 			typedef T value_type;
-			typedef list_detail::list_iterator<T> iterator;
 			typedef ptrdiff_t difference_type;
 			typedef T& reference;
 			typedef const T& const_reference;
 			typedef T* pointer;
 
-			typedef const iterator const_iterator;
+			typedef list_detail::list_iterator<T, T*, T&> iterator;
+			typedef list_detail::list_iterator<T, const T*, const T&> const_iterator;
 			typedef mySTL::reverse_iterator<iterator> reverse_iterator;
 			typedef mySTL::reverse_iterator<const_iterator> const_reverse_iterator;
 
 			typedef list_detail::list_node<T>* nodePtr;
 		private:
-			iterator head;
-			iterator tail;
+			nodePtr head;
+			nodePtr tail;
 		public:
 			list();
 			explicit list(size_type n);
@@ -130,21 +134,21 @@ namespace mySTL {
 
 			~list();
 
-			iterator begin() { return head; }
-			const_iterator begin() const { return head; }
-			const_iterator cbegin() const { return head; }
+			iterator begin() { return iterator(head); }
+			const_iterator begin() const { return const_iterator(head); }
+			const_iterator cbegin() const { return const_iterator(head); }
 			reverse_iterator rbegin() { return reverse_iterator(end()); }
 			const_reverse_iterator crbegin() const { return const_reverse_iterator(end()); }
-			iterator end() { return tail; }
-			const_iterator end() const { return tail; }
-			const_iterator cend() const { return tail; }
+			iterator end() { return iterator(tail); }
+			const_iterator end() const { return const_iterator(tail); }
+			const_iterator cend() const { return const_iterator(tail); }
 			reverse_iterator rend() { return reverse_iterator(begin()); }
 			const_reverse_iterator crend() const { return const_reverse_iterator(begin()); }
 
 			reference back();
 			const_reference back() const;
-			reference front() { return *head; }
-			const_reference front() const { return *head; }
+			reference front() { return head->data; }
+			const_reference front() const { return head->data; }
 
 			iterator insert(iterator position, const value_type& value);
 			iterator insert(iterator position, size_type count, const value_type& value);
@@ -209,8 +213,8 @@ namespace mySTL {
 	template<class T, class Alloc>
 	void list<T, Alloc>::init() {
 		nodePtr node = newNode();
-		head.node = node;
-		tail.node = node;
+		head = node;
+		tail = node;
 	}
 	
 	template<class T, class Alloc>
@@ -235,10 +239,12 @@ namespace mySTL {
 	template<class T, class Alloc>
 	list<T, Alloc>::~list() {
 		while (head != tail) {
-			auto tmp = head++;
-			deleteNode(tmp.node);
+			auto tmp = head;
+			head = head->next;
+			deleteNode(tmp);
 		}
-		deleteNode(head.node);
+		
+		deleteNode(head);
 	}
 
 	template<class T, class Alloc>
@@ -265,8 +271,8 @@ namespace mySTL {
 	template<class T, class Alloc>
 	list<T, Alloc>& list<T, Alloc>::operator=(const list& other) {
 		if (*this == other) return *this;
-		auto it1 = head;
-		auto it2 = other.head;
+		auto it1 = begin();
+		auto it2 = other.begin();
 		while (it1 != end() && it2 != other.end()) {
 			*it1 = *it2;
 			it1++;
@@ -293,9 +299,9 @@ namespace mySTL {
 	typename list<T, Alloc>::iterator list<T, Alloc>::insert(iterator position, const value_type& value) {
 		if (position == begin()) {
 			nodePtr node = newNode(value);
-			head.node->prev = node;
-			node->next = head.node;
-			head.node = node;
+			head->prev = node;
+			node->next = head;
+			head = node;
 			return begin();
 		}
 		nodePtr node = newNode(value);
@@ -375,22 +381,22 @@ namespace mySTL {
 	template<class T, class Alloc>
 	void list<T, Alloc>::pop_front() {
 		auto tmp = head;
-		head++;
-		head.node->prev = nullptr;
-		deleteNode(tmp.node);
+		head = head->next;
+		head->prev = nullptr;
+		deleteNode(tmp);
 	}
 	template<class T, class Alloc>
 	void list<T, Alloc>::pop_back() {
 		auto tmp = tail;
-		tail--;
-		tail.node->next = nullptr;
-		deleteNode(tmp.node);
+		tail = tail->prev;
+		tail->next = nullptr;
+		deleteNode(tmp);
 	}
 
 	template<class T, class Alloc>
 	typename list<T, Alloc>::size_type list<T, Alloc>::size() const {
 		size_type distance = 0;
-		for (auto p = head; p != tail; p++) {
+		for (auto p = head; p != tail; p = p->next) {
 			distance++;
 		}
 		return distance;
@@ -403,12 +409,12 @@ namespace mySTL {
 
 	template<class T, class Alloc>
 	void list<T, Alloc>::swap(list& other) {
-		auto tmp = head.node;
-		head.node = other.head.node;
-		other.head.node = tmp;
-		tmp = tail.node;
-		tail.node = other.tail.node;
-		other.tail.node = tmp;
+		auto tmp = head;
+		head = other.head;
+		other.head = tmp;
+		tmp = tail;
+		tail = other.tail;
+		other.tail = tmp;
 	}
 
 	template<class T, class Alloc>
@@ -428,17 +434,17 @@ namespace mySTL {
 		if (first.node == last.node) return;
 		nodePtr endNode = last.node->prev;
 		if (first == other.begin()) {
-			other.head.node = last.node;
-			other.head.node->prev = nullptr;
+			other.head = last.node;
+			other.head->prev = nullptr;
 		}
 		else {
 			first.node->prev->next = last.node;
 			last.node->prev = first.node->prev;
 		}
-		if (position == head) {
-			head.node->prev = endNode;
-			endNode->next = head.node;
-			head.node = first.node;
+		if (position.node == head) {
+			head->prev = endNode;
+			endNode->next = head;
+			head = first.node;
 			first.node->prev = nullptr;
 		}
 		else {
@@ -457,7 +463,7 @@ namespace mySTL {
 	template<class T, class Alloc>
 	template<class Compare>
 	void list<T, Alloc>::sort(Compare comp) {
-		if (empty() || head.node->next == tail.node) return;
+		if (empty() || head->next == tail) return;
 		list<T, Alloc> carry;
 		list<T, Alloc> count[64];
 		int lastIdx = 0;
@@ -505,25 +511,27 @@ namespace mySTL {
 	template<class T, class Alloc>
 	void list<T, Alloc>::reverse() {
 		auto it = begin();
-		while (it != tail) {
+		auto endIt = end();
+		while (it != endIt) {
 			auto tmp = it;
 			it++;
 			tmp.node->next = tmp.node->prev;
 			tmp.node->prev = it.node;
 		}
-		auto tmpNode = head.node;
-		tmpNode->next = tail.node;
-		head.node = tail.node->prev;
-		head.node->prev = nullptr;
-		tail.node->prev = tmpNode;
+		auto tmpNode = head;
+		tmpNode->next = tail;
+		head = tail->prev;
+		head->prev = nullptr;
+		tail->prev = tmpNode;
 	}
 
 	template<class T, class Alloc>
 	void list<T, Alloc>::unique() {
-		if (empty() || head.node->next == tail.node) return;
+		if (empty() || head->next == tail) return;
 		auto it2 = begin();
 		auto it1 = it2++;
-		while (it1 != end() && it2 != end()) {
+		auto endIt = end();
+		while (it1 != endIt && it2 != endIt) {
 			if (*it1 == *it2) {
 				it1.node->next = it2.node->next;
 				it2.node->next->prev = it1.node;
@@ -540,10 +548,11 @@ namespace mySTL {
 	template<class T, class Alloc>
 	template <class BinaryPredicate>
 	void list<T, Alloc>::unique(BinaryPredicate binary_pred) {
-		if (empty() || head.node->next == tail.node) return;
+		if (empty() || head->next == tail) return;
 		auto it2 = begin();
 		auto it1 = it2++;
-		while (it1 != end() && it2 != end()) {
+		auto endIt = end();
+		while (it1 != endIt && it2 != endIt) {
 			if (binary_pred(*it1, *it2)) {
 				it1.node->next = it2.node->next;
 				it2.node->next->prev = it1.node;
@@ -561,7 +570,8 @@ namespace mySTL {
 	void list<T, Alloc>::remove(const T& value) {
 		if (empty()) return;
 		auto it = begin();
-		while (it != end()) {
+		auto endIt = end();
+		while (it != endIt) {
 			if (*it == value) {
 				it = erase(it);
 			}
@@ -576,7 +586,8 @@ namespace mySTL {
 	void list<T, Alloc>::remove_if(UnaryPredicate p) {
 		if (empty()) return;
 		auto it = begin();
-		while (it != end()) {
+		auto endIt = end();
+		while (it != endIt) {
 			if (p(*it)) {
 				it = erase(it);
 			}
@@ -588,16 +599,12 @@ namespace mySTL {
 
 	template<class T, class Alloc>
 	typename list<T, Alloc>::reference list<T, Alloc>::back() {
-		auto tmp = tail;
-		tmp--;
-		return *tmp;
+		return tail->prev->data;
 	}
 
 	template<class T, class Alloc>
 	typename list<T, Alloc>::const_reference list<T, Alloc>::back() const {
-		auto tmp = tail;
-		tmp--;
-		return *tmp;
+		return tail->prev->data;
 	}
 
 	template<class T, class Alloc>
@@ -605,7 +612,8 @@ namespace mySTL {
 		if (lhs.size() != rhs.size()) return false;
 		auto first1 = lhs.begin();
 		auto first2 = rhs.begin();
-		while (first1 != lhs.end()) {
+		auto end1 = lhs.end();
+		while (first1 != end1) {
 			if (*first1 != *first2)
 				return false;
 			first1++;
