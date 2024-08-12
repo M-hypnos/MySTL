@@ -7,6 +7,7 @@
 #include "test/slistTest.h"
 #include "test/queueTest.h"
 #include "test/heapTest.h"
+#include "test/rbTreeTest.h"
 
 int main()
 {
@@ -17,4 +18,5 @@ int main()
     mySTL::slistTest::test();
     mySTL::queueTest::test();
     mySTL::heapTest::test();
+    mySTL::rbTreeTest::test();
 }
