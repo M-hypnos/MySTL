@@ -96,6 +96,7 @@ namespace mySTL {
 			rb_tree_iterator(const rb_tree_iterator& other) :rb_tree_iterator_base(other.node) {}
 
 			reference operator*() {
+				node_pointer tmp = node_pointer(node);
 				return node_pointer(node)->value_field;
 				//return statc_cast<node_pointer>(node).vl
 			}
@@ -329,6 +330,8 @@ namespace mySTL {
 			void erase_node(node_pointer node);
 			void rb_tree_erase_rebalance(node_pointer node);
 
+			bool equal(iterator first, iterator last, iterator pos) const;
+
 			bool isBalance_aux(node_pointer node, int count, int num);
 			bool isBST(node_pointer node);
 			void print_aux(node_pointer node, int deep);
@@ -418,18 +421,36 @@ namespace mySTL {
 				std::swap(key_compare, other.key_compare);
 			}
 
+			iterator insert_unique(iterator position, const value_type& value);
 			std::pair<iterator, bool> insert_unique(const value_type& value);
 			template<class InputIterator>
 			void insert_unique(InputIterator first, InputIterator last);
 
 			iterator insert_equal(const value_type& value);
+			iterator insert_equal(iterator position, const value_type& value);
 			template<class InputIterator>
 			void insert_equal(InputIterator first, InputIterator last);
 
 			bool isBalance();
 
 			void print();
+
+			template<class Key, class Value, class KeyOfValue, class Compare, class Alloc>
+			friend bool operator==(const rb_tree<Key, Value, KeyOfValue, Compare, Alloc>& lhs, const rb_tree<Key, Value, KeyOfValue, Compare, Alloc>& rhs);
 	};
+	template<class Key, class Value, class KeyOfValue, class Compare, class Alloc>
+	bool rb_tree<Key, Value, KeyOfValue, Compare, Alloc>::equal(iterator first, iterator last, iterator pos) const {
+		while (first != last) {
+			if (*first++ != *pos++) return false;
+		}
+		return true;
+	}
+
+	template<class Key, class Value, class KeyOfValue, class Compare, class Alloc>
+	bool operator==(const rb_tree<Key, Value, KeyOfValue, Compare, Alloc>& lhs, const rb_tree<Key, Value, KeyOfValue, Compare, Alloc>& rhs) {
+		return lhs.size() == rhs.size() && equal(lhs.begin(), lhs.end(), rhs.begin());
+	}
+
 
 	template<class Key, class Value, class KeyOfValue, class Compare, class Alloc>
 	void rb_tree<Key, Value, KeyOfValue, Compare, Alloc>::erase_aux(node_pointer node) {
@@ -482,9 +503,6 @@ namespace mySTL {
 
 		node_num++;
 
-		node_pointer r = rightmost();
-		node_pointer l = leftmost();
-
 		return iterator(new_node);
 	}
 
@@ -504,7 +522,9 @@ namespace mySTL {
 
 		iterator it = iterator(parent);
 		if (isLessParent) {
-			if (it == begin()) return std::pair<iterator, bool>(insert_aux(node, parent, value), true);
+			if (it == begin()) {
+				return std::pair<iterator, bool>(insert_aux(node, parent, value), true);
+			}
 			else
 				//判断parent上面有没有与value相等key的节点
 				it--;
@@ -514,6 +534,33 @@ namespace mySTL {
 		else
 			//printf("insert failed\n");
 			return std::pair<iterator, bool>(it, false);
+	}
+
+	template<class Key, class Value, class KeyOfValue, class Compare, class Alloc>
+	typename rb_tree<Key, Value, KeyOfValue, Compare, Alloc>::iterator rb_tree<Key, Value, KeyOfValue, Compare, Alloc>::insert_unique(iterator position, const value_type& value) {
+		if (position.node == header->left) {
+			if (size() > 0 && key_compare(KeyOfValue()(value), key(position.node)))
+				return insert_aux(nullptr, position.node, value);
+			else
+				return insert_unique(value).first;
+		}
+		else if (position.node == header) {
+			if (key_compare(key(rightmost()), KeyOfValue()(value)))
+				return insert_aux(nullptr, rightmost(), value);
+			else
+				return insert_unique(value).first;
+		}
+		else {
+			iterator it = position;
+			it--;
+			if (key_compare(key(position.node), KeyOfValue()(value)) && key_compare(KeyOfValue()(value), key(position.node))) {
+				if (right(it.node) == nullptr)
+					return insert_aux(nullptr, it.node, value);
+				else if (left(position.node) == nullptr)
+					return insert_aux(nullptr, position.node, value);
+			}else
+				return insert_unique(value).first;
+		}
 	}
 
 	template<class Key, class Value, class KeyOfValue, class Compare, class Alloc>
@@ -534,6 +581,33 @@ namespace mySTL {
 			node = key_compare(KeyOfValue()(value), key(node)) ? left(node) : right(node);
 		}
 		return insert_aux(node, parent, value);
+	}
+
+	template<class Key, class Value, class KeyOfValue, class Compare, class Alloc>
+	typename rb_tree<Key, Value, KeyOfValue, Compare, Alloc>::iterator rb_tree<Key, Value, KeyOfValue, Compare, Alloc>::insert_equal(iterator position, const value_type& value) {
+		if (position.node == header->left) {
+			if (size() > 0 && key_compare(KeyOfValue()(value), key(position.node)))
+				return insert_aux(nullptr, position.node, value);
+			else
+				return insert_equal(value);
+		}
+		else if (position.node == header) {
+			if (!key_compare(insert_equal, key(rightmost())))
+				return insert_aux(nullptr, rightmost(), value);
+			else
+				return insert_equal(value);
+		}
+		else {
+			iterator it = position;
+			it--;
+			if (!key_compare(KeyOfValue(value), key(it.node)) && !key_compare(key(position.node), KeyOfValue(value))) {
+				if (right(it.node) == nullptr)
+					return insert_aux(nullptr, it.node, value);
+				else if (left(position.node) == nullptr)
+					return insert_aux(nullptr, position.node, value);
+			}
+		}
+		return insert_equal(value);
 	}
 
 	template<class Key, class Value, class KeyOfValue, class Compare, class Alloc>
@@ -715,9 +789,66 @@ namespace mySTL {
 			node_num--;
 		}
 		else if (node->left != nullptr && node->right != nullptr) {
+			auto nodeType = node->get_child_type();
+			auto nodeParent = node->parent;
 			node_pointer preNode = get_max_node(left(node));
-			node->value_field = preNode->value_field;
-			erase_node(preNode);
+			if (node->left == preNode) {
+				node->left = preNode->left;
+				if (preNode->left != nullptr)
+					preNode->left->parent = node;
+				preNode->left = node;
+				node->parent = preNode;
+
+				preNode->right = node->right;
+				node->right->parent = preNode;
+				node->right = nullptr;
+				if (nodeType == rb_tree_detail::rb_tree_leftChild)
+					nodeParent->left = preNode;
+				else if (nodeType == rb_tree_detail::rb_tree_rightChild)
+					nodeParent->right = preNode;
+				else
+					root() = preNode;
+				preNode->parent = nodeParent;
+				if (leftmost() == preNode)
+					leftmost() = node;
+			}
+			else {
+				auto nodeLeft = node->left;
+				auto nodeRight = node->right;
+
+				auto preNodeType = preNode->get_child_type();
+				auto preNodeParent = preNode->parent;
+				auto preNodeLeft = preNode->left;
+
+				node->parent = preNodeParent;
+				if (preNodeType == rb_tree_detail::rb_tree_leftChild)
+					preNodeParent->left = node;
+				else
+					preNodeParent->right = node;
+				node->left = preNodeLeft;
+				if (preNodeLeft != nullptr)
+					preNodeLeft->parent = node;
+				node->right = nullptr;
+
+				preNode->parent = nodeParent;
+				if (nodeType == rb_tree_detail::rb_tree_leftChild)
+					nodeParent->left = preNode;
+				else if (nodeType == rb_tree_detail::rb_tree_rightChild)
+					nodeParent->right = preNode;
+				else
+					root() = preNode;
+				preNode->left = nodeLeft;
+				nodeLeft->parent = preNode;
+				preNode->right = nodeRight;
+				nodeRight->parent = preNode;
+			}
+
+			std::swap(node->color, preNode->color);
+
+			node_pointer r = root();
+			int i = 0;
+
+			erase_node(node);
 		}
 		else {
 			node_pointer child = node->left != nullptr ? child = left(node) : child = right(node);
