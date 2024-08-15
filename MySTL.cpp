@@ -8,6 +8,7 @@
 #include "test/queueTest.h"
 #include "test/heapTest.h"
 #include "test/rbTreeTest.h"
+#include "test/mapTest.h"
 
 int main()
 {
@@ -19,4 +20,5 @@ int main()
     mySTL::queueTest::test();
     mySTL::heapTest::test();
     mySTL::rbTreeTest::test();
+    mySTL::mapTest::test();
 }
